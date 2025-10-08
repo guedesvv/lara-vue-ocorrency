@@ -169,7 +169,6 @@ class ProductController extends Controller
         $products = Product::all();
         $now = now();
 
-        // ===== 1) Status das ocorrências =====
         $statusCounts = [
             'Atrasado' => 0,
             'Pendente' => 0,
@@ -178,36 +177,49 @@ class ProductController extends Controller
             'Evidência Recusada' => 0,
         ];
 
+        $items = []; // ← aqui vamos gerar também
+
         foreach ($products as $product) {
+            $status = '';
+
             if (! $product->pdf_path && $product->dueDate < $now) {
-                $statusCounts['Atrasado']++;
+                $status = 'Atrasado';
             } elseif (! $product->pdf_path && $product->dueDate >= $now) {
-                $statusCounts['Pendente']++;
+                $status = 'Pendente';
             } elseif ($product->pdf_path && is_null($product->confirmEvidency)) {
-                $statusCounts['Pendente Aprovação']++;
+                $status = 'Pendente Aprovação';
             } elseif ($product->pdf_path && $product->confirmEvidency === 'Aprovado') {
-                $statusCounts['Finalizado']++;
+                $status = 'Finalizado';
             } elseif ($product->pdf_path && $product->confirmEvidency === 'Reprovado') {
-                $statusCounts['Evidência Recusada']++;
+                $status = 'Evidência Recusada';
             }
+
+            // acumula contagem
+            if ($status) {
+                $statusCounts[$status]++;
+            }
+
+            // adiciona item para o gráfico dinâmico
+            $items[] = [
+                'cr' => $product->cr,
+                'origin' => $product->origin,
+                'status' => $status,
+            ];
         }
 
-        // ===== 2) Quantidade por CR =====
         $crCounts = Product::selectRaw('cr, COUNT(*) as total')
             ->groupBy('cr')
             ->pluck('total', 'cr');
-        // Pluck -> vira um array tipo ["16749 - SP - LOG ..." => 5, ...]
 
-        // ===== 3) Quantidade por Origem =====
         $originCounts = Product::selectRaw('origin, COUNT(*) as total')
             ->groupBy('origin')
             ->pluck('total', 'origin');
 
-        // ===== Render =====
         return Inertia::render('Dashboard', [
             'statusCounts' => $statusCounts,
             'crCounts' => $crCounts,
             'originCounts' => $originCounts,
+            'items' => $items, // 👈 agora com status calculado
         ]);
     }
 }

@@ -1,215 +1,205 @@
 <script setup lang="ts">
 import {
-    Chart as ChartJS,
-    Title,
-    Tooltip,
-    Legend,
-    BarElement,
-    CategoryScale,
-    LinearScale
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale
 } from "chart.js"
 import ChartDataLabels from "chartjs-plugin-datalabels"
 import { Bar } from "vue-chartjs"
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Head } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Funnel, Filter } from 'lucide-vue-next' // ícones bonitos (opcional se usa shadcn ou lucide)
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ChartDataLabels)
 
-// Props vindas do Laravel
+// ===== PROPS =====
 const props = defineProps<{
-    statusCounts?: Record<string, number>,
-    crCounts?: Record<string, number>,
-    originCounts?: Record<string, number>,
+  statusCounts?: Record<string, number>,
+  crCounts?: Record<string, number>,
+  originCounts?: Record<string, number>,
+  items?: Array<{ cr: string; origin: string; status: string; count?: number }>
 }>()
 
-// Fallbacks
 const statusCounts = props.statusCounts ?? {}
 const crCounts = props.crCounts ?? {}
 const originCounts = props.originCounts ?? {}
+const items = props.items ?? []
 
-// Mapeamento CR → Nome
+// ===== MAP CR → NOME =====
 const crMap: Record<string, string> = {
-  "16749": "BRASMETAL",
-  "17542": "SAMARCO",
-  "17543": "SAMARCO",
-  "24178": "SAMARCO",
-  "24238": "BRASKEM",
-  "25458": "LOCALFRIO",
-  "26052": "CHEVRON",
-  "27911": "BRASKEM",
-  "32470": "BASF",
-  "35118": "USIMINAS",
-  "35119": "USIMINAS",
-  "35122": "USIMINAS",
-  "35132": "USIMINAS",
-  "35180": "USIMINAS",
-  "40703": "FLEURY",
-  "43409": "BASF",
-  "44242": "BRASMETAL",
-  "44914": "BRASKEM",
-  "45955": "BASF",
-  "47287": "INDIRETOS",
-  "51115": "ISA ENERGIA",
-  "56115": "SAMARCO",
-  "58492": "FLEURY",
-  "62338": "ANGLO",
-  "68807": "USIMINAS",
-  "68820": "INDIRETOS",
-  "75999": "INDIRETOS",
-  "76047": "INDIRETOS",
-  "76357": "USIMINAS",
-  "77943": "BRASMETAL",
-  "79012": "ATLAS COPCO",
-  "82840": "INDIRETOS",
+  "16749": "BRASMETAL", "17542": "SAMARCO", "17543": "SAMARCO", "24178": "SAMARCO",
+  "24238": "BRASKEM", "25458": "LOCALFRIO", "26052": "CHEVRON", "27911": "BRASKEM",
+  "32470": "BASF", "35118": "USIMINAS", "35119": "USIMINAS", "35122": "USIMINAS",
+  "35132": "USIMINAS", "35180": "USIMINAS", "40703": "FLEURY", "43409": "BASF",
+  "44242": "BRASMETAL", "44914": "BRASKEM", "45955": "BASF", "47287": "INDIRETOS",
+  "51115": "ISA ENERGIA", "56115": "SAMARCO", "58492": "FLEURY", "62338": "ANGLO",
+  "68807": "USIMINAS", "68820": "INDIRETOS", "75999": "INDIRETOS", "76047": "INDIRETOS",
+  "76357": "USIMINAS", "77943": "BRASMETAL", "79012": "ATLAS COPCO", "82840": "INDIRETOS",
 }
 
-// === Gráfico 1: Ocorrências por CR (agrupado) ===
-const groupedCrCounts: Record<string, number> = {}
-Object.entries(crCounts).forEach(([cr, value]) => {
-  const crNumber = cr.substring(0, 5)
-  const name = crMap[crNumber] ?? crNumber
-  groupedCrCounts[name] = (groupedCrCounts[name] || 0) + value
+// ===== FILTROS =====
+const selectedCr = ref<string>('__ALL__')
+const selectedOrigin = ref<string>('__ALL__')
+const selectedStatus = ref<string>('__ALL__')
+
+// ===== FUNÇÕES AUX =====
+function passesFilter(it: { cr: string; origin: string; status: string }) {
+  const crNumber = it.cr?.substring(0, 5) ?? it.cr
+  const crName = crMap[crNumber] ?? crNumber ?? ''
+  const crOk = selectedCr.value === '__ALL__' || crName === selectedCr.value
+  const originOk = selectedOrigin.value === '__ALL__' || it.origin === selectedOrigin.value
+  const statusOk = selectedStatus.value === '__ALL__' || it.status === selectedStatus.value
+  return crOk && originOk && statusOk
+}
+
+function aggregate<T extends string>(arr: Array<Record<string, any>>, key: T, mapKey?: (v: string) => string) {
+  const out: Record<string, number> = {}
+  for (const it of arr) {
+    const raw = String(it[key] ?? '')
+    const label = mapKey ? mapKey(raw) : raw
+    if (!label) continue
+    const qty = it.count ?? 1
+    out[label] = (out[label] || 0) + qty
+  }
+  return out
+}
+
+function makeOptions(title: string) {
+  return {
+    indexAxis: "y" as const,
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      datalabels: {
+        anchor: "center",
+        align: "center",
+        color: "#fff",
+        font: { weight: "bold", size: 12 },
+        formatter: (value: number) => value,
+      },
+      title: {
+        display: true,
+        text: title,
+        font: { size: 16, weight: "bold" },
+        color: "#111827",
+      },
+    },
+    scales: {
+      x: { display: false, grid: { display: false } },
+      y: { ticks: { color: "#111827" }, grid: { display: false } },
+    },
+  }
+}
+function toDataset(values: number[], color = "#004FA3") {
+  return [{ data: values, backgroundColor: color, borderRadius: 6 }]
+}
+
+// ===== REATIVIDADE GERAL =====
+const filteredItems = computed(() => items.filter(passesFilter))
+
+// opções dos selects se ajustam dinamicamente com base nos itens filtrados
+const crOptions = computed(() => {
+  const base = selectedOrigin.value !== '__ALL__' || selectedStatus.value !== '__ALL__' ? filteredItems.value : items
+  const set = new Set<string>()
+  for (const it of base) {
+    const crNum = it.cr?.substring(0, 5) ?? it.cr
+    set.add(crMap[crNum] ?? crNum ?? '')
+  }
+  return Array.from(set).filter(Boolean).sort()
+})
+const originOptions = computed(() => {
+  const base = selectedCr.value !== '__ALL__' || selectedStatus.value !== '__ALL__' ? filteredItems.value : items
+  return Array.from(new Set(base.map(i => i.origin))).filter(Boolean).sort()
+})
+const statusOptions = computed(() => {
+  const base = selectedCr.value !== '__ALL__' || selectedOrigin.value !== '__ALL__' ? filteredItems.value : items
+  return Array.from(new Set(base.map(i => i.status))).filter(Boolean).sort()
 })
 
-const crData = {
-  labels: Object.keys(groupedCrCounts),
-  datasets: [
-    {
-      data: Object.values(groupedCrCounts),
-      backgroundColor: "#020D45",
-      borderRadius: 6,
-    },
-  ],
-}
-const crOptions = {
-  indexAxis: "y",
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    datalabels: {
-      anchor: "center",
-      align: "center",
-      color: "#fff",
-      font: { weight: "bold", size: 12 },
-      formatter: (value: number) => value,
-    },
-    title: {
-      display: true,
-      text: "Ocorrências por CR",
-      font: { size: 16, weight: "bold" },
-      color: "#111827",
-    },
-  },
-  scales: {
-    x: { display: false, grid: { display: false } }, // remove números e linhas
-    y: { ticks: { color: "#111827" }, grid: { display: false } }, // mantém nomes, tira linhas
-  },
-}
+// ===== GRÁFICOS =====
+const crAgg = computed(() => aggregate(filteredItems.value, 'cr', cr => crMap[cr.substring(0, 5)] ?? cr))
+const crData = computed(() => ({ labels: Object.keys(crAgg.value), datasets: toDataset(Object.values(crAgg.value), "#020D45") }))
+const crChartOptions = makeOptions("Ocorrências por CR")
 
-// === Gráfico 2: Por Origem ===
-const originData = {
-  labels: Object.keys(originCounts),
-  datasets: [
-    {
-      data: Object.values(originCounts),
-      backgroundColor: "#004FA3",
-      borderRadius: 6,
-    },
-  ],
-}
-const originOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    datalabels: {
-      anchor: "center",
-      align: "center",
-      color: "#fff",
-      font: { weight: "bold", size: 12 },
-      formatter: (value: number) => value,
-    },
-    title: {
-      display: true,
-      text: "Ocorrências por Origem",
-      font: { size: 16, weight: "bold" },
-      color: "#111827",
-    },
-  },
-  scales: {
-    x: { grid: { display: false } }, // remove linhas, mantém nomes
-    y: { grid: { display: false } }, // remove linhas, mantém nomes
-  },
-}
+const originAgg = computed(() => aggregate(filteredItems.value, 'origin'))
+const originData = computed(() => ({ labels: Object.keys(originAgg.value), datasets: toDataset(Object.values(originAgg.value), "#004FA3") }))
+const originChartOptions = makeOptions("Ocorrências por Origem")
 
-// === Gráfico 3: Status ===
-const statusData = {
-  labels: Object.keys(statusCounts),
-  datasets: [
-    {
-      data: Object.values(statusCounts),
-      backgroundColor: [
-        "#AD000F", // Atrasado
-        "#AD000F", // Pendente
-        "#AD000F", // Pendente Aprovação
-        "#025C12", // Finalizado
-        "#AD000F", // Recusado
-      ],
+const statusAgg = computed(() => aggregate(filteredItems.value, 'status'))
+const statusData = computed(() => {
+  const labels = Object.keys(statusAgg.value)
+  const values = Object.values(statusAgg.value)
+  return {
+    labels,
+    datasets: [{
+      data: values,
+      backgroundColor: labels.map(lbl => lbl.toLowerCase().includes('final') ? "#025C12" : "#AD000F"),
       borderRadius: 6,
-    },
-  ],
-}
-const statusOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    datalabels: {
-      anchor: "center",
-      align: "center",
-      color: "#fff",
-      font: { weight: "bold", size: 14 },
-      formatter: (value: number) => value,
-    },
-    title: {
-      display: true,
-      text: "Status das ocorrências",
-      font: { size: 16, weight: "bold" },
-      color: "#111827",
-    },
-  },
-  scales: {
-    x: { grid: { display: false } }, // remove linhas, mantém nomes
-    y: { grid: { display: false } }, // remove linhas, mantém nomes
-  },
-}
+    }]
+  }
+})
+const statusChartOptions = makeOptions("Status das ocorrências")
 </script>
 
 <template>
-  <Head title="Dashboard" />
 
+  <Head title="Dashboard" />
   <AppLayout :breadcrumbs="[{ title: 'Dashboard', href: '/dashboard' }]">
-    <div class="grid grid-cols-3 gap-4 p-4">
-      
-      <!-- Bloco 1 - Ocorrências por CR -->
-      <div class="col-span-1 h-[800px] border rounded-xl bg-white dark:bg-gray-900 p-4 shadow-lg">
-        <Bar v-if="Object.keys(crCounts).length" :data="crData" :options="crOptions" />
-        <p v-else class="text-gray-500">Sem dados de CR</p>
+    <div class="p-4 space-y-6">
+
+      <!-- 🔹 FILTROS BONITOS E RESPONSIVOS -->
+      <div
+        class="flex flex-wrap items-end gap-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+          <!-- CR -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CR</label>
+            <select v-model="selectedCr"
+              class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+              <option value="__ALL__">Todos</option>
+              <option v-for="cr in crOptions" :key="cr" :value="cr">{{ cr }}</option>
+            </select>
+          </div>
+
+          <!-- Origem -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Origem</label>
+            <select v-model="selectedOrigin"
+              class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+              <option value="__ALL__">Todas</option>
+              <option v-for="o in originOptions" :key="o" :value="o">{{ o }}</option>
+            </select>
+          </div>
+
+          <!-- Status -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <select v-model="selectedStatus"
+              class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+              <option value="__ALL__">Todos</option>
+              <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <!-- Bloco 2 e 3 -->
-      <div class="col-span-2 flex flex-col gap-4">
-        <!-- Origem -->
-        <div class="h-[300px] border rounded-xl bg-white dark:bg-gray-900 p-4 shadow-lg">
-          <Bar v-if="Object.keys(originCounts).length" :data="originData" :options="originOptions" />
-          <p v-else class="text-gray-500">Sem dados de Origem</p>
+      <!-- 🔹 GRÁFICOS AJUSTADOS À TELA -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-260px)]">
+        <div class="border rounded-xl bg-white dark:bg-gray-900 p-4 shadow-lg">
+          <Bar :data="crData" :options="crChartOptions" />
         </div>
-
-        <!-- Status -->
-        <div class="h-[500px] border rounded-xl bg-white dark:bg-gray-900 p-6 shadow-lg">
-          <Bar v-if="Object.keys(statusCounts).length" :data="statusData" :options="statusOptions" />
-          <p v-else class="text-gray-500">Sem dados de Status</p>
+        <div class="border rounded-xl bg-white dark:bg-gray-900 p-4 shadow-lg">
+          <Bar :data="originData" :options="originChartOptions" />
+        </div>
+        <div class="border rounded-xl bg-white dark:bg-gray-900 p-4 shadow-lg">
+          <Bar :data="statusData" :options="statusChartOptions" />
         </div>
       </div>
 
