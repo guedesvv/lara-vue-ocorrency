@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Rocket, Pencil, Trash, FileText } from 'lucide-vue-next';
+import { Rocket, Pencil, Trash, FileText, Eye, X } from 'lucide-vue-next';
 import {
     Table,
     TableBody,
@@ -16,51 +16,49 @@ import {
 import { ref, computed } from 'vue'
 
 interface Product {
-    id: number,
-    cr: string,
-    ocorrency: string,
-    origin: string,
-    action: string,
-    startDate: Date,
-    dueDate: Date,
-    email: string,
-    emailCreator?: string,
-    created_at: Date,
-    pdf_path?: string,
-    confirmEvidency?: string,
+    id: number
+    cr: string
+    ocorrency: string
+    origin: string
+    action: string
+    startDate: Date
+    dueDate: Date
+    email: string
+    emailCreator?: string
+    nameCreator?: string // 👈 adicione esta linha
+    created_at: Date
+    pdf_path?: string
+    confirmEvidency?: string
 }
 
+
 interface User {
-    id: number,
-    name: string,
-    email: string,
+    id: number
+    name: string
+    email: string
 }
 
 interface Props {
-    products: Product[];
-    users: User[];
+    products: Product[]
+    users: User[]
 }
 
-const props = defineProps<Props>();
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Ocorrências',
-        href: '/products',
-    },
-];
+const props = defineProps<Props>()
 
 const page = usePage()
 const currentUserEmail = page.props.auth?.user?.email
 const currentUserType = page.props.auth?.user?.userType
 
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Ocorrências', href: '/products' },
+]
+
 function nowBrazil() {
-    const now = new Date();
-    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-    return new Date(utc - 3 * 60 * 60000);
+    const now = new Date()
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000
+    return new Date(utc - 3 * 60 * 60000)
 }
 
-// Função que retorna o status da ocorrência
 function getStatus(product: Product): string {
     if (!product.pdf_path && new Date(product.dueDate) < nowBrazil()) return "Atrasado"
     if (!product.pdf_path && new Date(product.dueDate) >= nowBrazil()) return "Pendente"
@@ -70,10 +68,9 @@ function getStatus(product: Product): string {
     return ""
 }
 
-// Permissões
 const handleDelete = (id: number) => {
     if (confirm('Você quer realmente remover a ocorrência?')) {
-        router.delete(route('products.destroy', { id }));
+        router.delete(route('products.destroy', { id }))
     }
 }
 
@@ -94,14 +91,12 @@ const canCreate = () => {
     return currentUserType === 'ADM' || currentUserType === 'Usuario Plus'
 }
 
-// 🔹 Retorna nome do criador
 const getCreatorName = (emailCreator?: string) => {
     if (!emailCreator) return "—"
     const user = props.users.find(u => u.email === emailCreator)
     return user ? user.name : emailCreator
 }
 
-// 🔹 Filtros
 const filters = ref({
     creator: "",
     cr: "",
@@ -116,8 +111,8 @@ const filters = ref({
 
 function formatDateForFilter(date: string | Date) {
     const d = new Date(date)
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset()) // corrige para o fuso local
-    return d.toISOString().slice(0, 10) // yyyy-mm-dd
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+    return d.toISOString().slice(0, 10)
 }
 
 const filteredProducts = computed(() => {
@@ -133,9 +128,33 @@ const filteredProducts = computed(() => {
         (!filters.value.status || getStatus(p) === filters.value.status)
     )
 })
+
+// === Controle do Modal da Ação ===
+const showActionModal = ref(false)
+const selectedAction = ref("")
+
+// === Mapeamento de CRs e Clientes ===
+const crClientes: Record<string, string> = {
+    "16749": "BRASMETAL", "17542": "SAMARCO", "17543": "SAMARCO", "24178": "SAMARCO",
+    "24238": "BRASKEM", "25458": "LOCALFRIO", "26052": "CHEVRON", "27911": "BRASKEM",
+    "32470": "BASF", "35118": "USIMINAS", "35119": "USIMINAS", "35122": "USIMINAS",
+    "35132": "USIMINAS", "35180": "USIMINAS", "40703": "FLEURY", "43409": "BASF",
+    "44242": "BRASMETAL", "44914": "BRASKEM", "45955": "BASF", "47287": "INDIRETOS",
+    "51115": "ISA ENERGIA", "56115": "SAMARCO", "58492": "FLEURY", "62338": "ANGLO",
+    "68807": "USIMINAS", "68820": "INDIRETOS", "75999": "INDIRETOS", "76047": "INDIRETOS",
+    "76357": "USIMINAS", "77943": "BRASMETAL", "79012": "ATLAS COPCO", "82840": "INDIRETOS",
+}
+
+// === Função que retorna o cliente conforme o CR ===
+function getClientePorCR(cr: string): string {
+    const crNum = cr.slice(0, 5)
+    return crClientes[crNum] || "—"
+}
+
 </script>
 
 <template>
+
     <Head title="Ocorrências" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
@@ -152,50 +171,70 @@ const filteredProducts = computed(() => {
                 </Alert>
             </div>
 
-            
-            <!-- Título -->
-            <h1 class="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
-                📋 Registro das Ocorrências
-            </h1>
-
-                        <!-- Botão Nova Ocorrência -->
-            <div class="mt-6" v-if="canCreate()">
+            <div class="mb-4" v-if="canCreate()">
                 <Link href="/products/create">
-                    <Button class="bg-blue-500 hover:bg-blue-600"><b>+ Nova Ocorrência</b></Button>
+                <Button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg shadow">
+                    + Nova Ocorrência
+                </Button>
                 </Link>
             </div>
-            <br></br>
-            
 
-            <!-- Tabela -->
-            <div class="rounded-xl border border-gray-300 dark:border-gray-700 shadow-md bg-gray-100 dark:bg-gray-900 w-full overflow-x-auto">
-                <Table class="w-full table-fixed border-collapse">
-                    <TableHeader class="bg-gray-200 dark:bg-gray-800">
-                        <TableRow class="divide-x divide-gray-300 dark:divide-gray-700 text-sm">
-                            <TableHead class="min-w-[140px]">Registrado por</TableHead>
-                            <TableHead class="min-w-[180px]">CR</TableHead>
-                            <TableHead class="min-w-[150px] break-words">Ocorrência</TableHead>
-                            <TableHead class="min-w-[120px] break-words">Origem</TableHead>
-                            <TableHead class="min-w-[180px] break-words">Ação</TableHead>
-                            <TableHead class="min-w-[90px]">Início</TableHead>
-                            <TableHead class="min-w-[90px]">Prazo</TableHead>
-                            <TableHead class="min-w-[200px] break-words">Responsável</TableHead>
-                            <TableHead class="min-w-[120px] text-center">Status</TableHead>
-                            <TableHead class="min-w-[60px] text-center">Ações</TableHead>
+            <div
+                class="rounded-xl border border-gray-300 dark:border-gray-700 shadow-lg bg-white dark:bg-gray-900 w-full overflow-x-auto">
+                <Table class="w-full border-collapse">
+                    <TableHeader class="bg-gray-100 dark:bg-gray-800">
+                        <TableRow
+                            class="divide-x divide-gray-300 dark:divide-gray-700 text-sm text-gray-700 dark:text-gray-200">
+                            <TableHead>Registrado por</TableHead>
+                            <TableHead>CR</TableHead>
+                            <TableHead>Ocorrência</TableHead>
+                            <TableHead>Origem</TableHead>
+                            <TableHead>Ação</TableHead>
+                            <TableHead>Início</TableHead>
+                            <TableHead>Prazo</TableHead>
+                            <TableHead>Responsável</TableHead>
+                            <TableHead class="text-center">Status</TableHead>
+                            <TableHead class="text-center">Ações</TableHead>
                         </TableRow>
 
-                        <!-- Linha de Filtros -->
-                        <TableRow class="divide-x divide-gray-300 dark:divide-gray-700 bg-gray-50 dark:bg-gray-700 text-sm">
-                            <TableCell><input v-model="filters.creator" placeholder="Filtrar" class="w-full p-1 text-xs" /></TableCell>
-                            <TableCell><input v-model="filters.cr" placeholder="Filtrar" class="w-full p-1 text-xs" /></TableCell>
-                            <TableCell><input v-model="filters.ocorrency" placeholder="Filtrar" class="w-full p-1 text-xs" /></TableCell>
-                            <TableCell><input v-model="filters.origin" placeholder="Filtrar" class="w-full p-1 text-xs" /></TableCell>
-                            <TableCell><input v-model="filters.action" placeholder="Filtrar" class="w-full p-1 text-xs" /></TableCell>
-                            <TableCell><input type="date" v-model="filters.startDate" class="w-full p-1 text-xs" /></TableCell>
-                            <TableCell><input type="date" v-model="filters.dueDate" class="w-full p-1 text-xs" /></TableCell>
-                            <TableCell><input v-model="filters.email" placeholder="Filtrar" class="w-full p-1 text-xs" /></TableCell>
+                        <!-- 🔹 Linha de Filtros -->
+                        <TableRow
+                            class="divide-x divide-gray-200 dark:divide-gray-700 bg-gray-50 dark:bg-gray-700 text-xs text-gray-700 dark:text-gray-200">
                             <TableCell>
-                                <select v-model="filters.status" class="w-full p-1 text-xs">
+                                <input v-model="filters.creator" placeholder="Filtrar"
+                                    class="w-full rounded-md p-1 px-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                            </TableCell>
+                            <TableCell>
+                                <input v-model="filters.cr" placeholder="Filtrar"
+                                    class="w-full rounded-md p-1 px-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                            </TableCell>
+                            <TableCell>
+                                <input v-model="filters.ocorrency" placeholder="Filtrar"
+                                    class="w-full rounded-md p-1 px-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                            </TableCell>
+                            <TableCell>
+                                <input v-model="filters.origin" placeholder="Filtrar"
+                                    class="w-full rounded-md p-1 px-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                            </TableCell>
+                            <TableCell>
+                                <input v-model="filters.action" placeholder="Filtrar"
+                                    class="w-full rounded-md p-1 px-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                            </TableCell>
+                            <TableCell>
+                                <input type="date" v-model="filters.startDate"
+                                    class="w-full rounded-md p-1 px-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                            </TableCell>
+                            <TableCell>
+                                <input type="date" v-model="filters.dueDate"
+                                    class="w-full rounded-md p-1 px-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                            </TableCell>
+                            <TableCell>
+                                <input v-model="filters.email" placeholder="Filtrar"
+                                    class="w-full rounded-md p-1 px-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+                            </TableCell>
+                            <TableCell>
+                                <select v-model="filters.status"
+                                    class="w-full rounded-md p-1 px-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-400 focus:outline-none">
                                     <option value="">Todos</option>
                                     <option value="Atrasado">Atrasado</option>
                                     <option value="Pendente">Pendente</option>
@@ -208,21 +247,36 @@ const filteredProducts = computed(() => {
                         </TableRow>
                     </TableHeader>
 
-                    <!-- Corpo -->
                     <TableBody>
                         <TableRow v-for="product in filteredProducts" :key="product.id"
-                            class="transition-colors divide-x divide-gray-300 dark:divide-gray-700 
-                                   odd:bg-gray-100 even:bg-gray-200 hover:bg-gray-300
-                                   dark:odd:bg-gray-900 dark:even:bg-gray-800 dark:hover:bg-gray-700">
+                            class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border-t border-gray-100 dark:border-gray-700">
 
-                            <TableCell class="whitespace-normal break-words">{{ getCreatorName(product.emailCreator) }}</TableCell>
-                            <TableCell class="whitespace-normal break-words">{{ product.cr }}</TableCell>
-                            <TableCell class="whitespace-normal break-words">{{ product.ocorrency }}</TableCell>
-                            <TableCell class="whitespace-normal break-words">{{ product.origin }}</TableCell>
-                            <TableCell class="whitespace-normal break-words">{{ product.action }}</TableCell>
+                            <TableCell>{{ product.nameCreator || '—' }}</TableCell>
+
+
+                            <!-- 🔹 CR + Cliente -->
+                            <TableCell class="whitespace-nowrap">
+                                {{ product.cr.slice(0, 5) }} - {{ getClientePorCR(product.cr) }}
+                            </TableCell>
+
+                            <TableCell>{{ product.ocorrency }}</TableCell>
+                            <TableCell>{{ product.origin }}</TableCell>
+
+                            <!-- Campo ação com botão -->
+                            <TableCell class="text-center">
+                                <Button size="icon" variant="ghost" class="hover:bg-blue-100 dark:hover:bg-blue-900"
+                                    @click="showActionModal = true; selectedAction = product.action">
+                                    <Eye class="h-4 w-4 text-blue-600" />
+                                </Button>
+                            </TableCell>
+
                             <TableCell>{{ new Date(product.startDate).toLocaleDateString("pt-BR") }}</TableCell>
                             <TableCell>{{ new Date(product.dueDate).toLocaleDateString("pt-BR") }}</TableCell>
-                            <TableCell class="whitespace-normal break-words">{{ product.email }}</TableCell>
+
+                            <!-- E-mail sem quebra -->
+                            <TableCell class="whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                                {{ product.email }}
+                            </TableCell>
 
                             <!-- Status -->
                             <TableCell class="text-center">
@@ -231,30 +285,40 @@ const filteredProducts = computed(() => {
                                 <span v-else-if="getStatus(product) === 'Pendente'"
                                     class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">Pendente</span>
                                 <span v-else-if="getStatus(product) === 'Pendente Aprovação'"
-                                    class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">Pendente Aprovação</span>
+                                    class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">Pendente
+                                    Aprovação</span>
                                 <span v-else-if="getStatus(product) === 'Finalizado'"
                                     class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">Finalizado</span>
                                 <span v-else-if="getStatus(product) === 'Evidência Recusada'"
-                                    class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-700">Evidência Recusada</span>
+                                    class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-700">Evidência
+                                    Recusada</span>
                             </TableCell>
 
-                            <!-- Ações -->
+                            <!-- Botões -->
                             <TableCell class="text-center">
                                 <template v-if="canEdit(product)">
-                                    <Link :href="`/products/${product.id}/edit`">
+                                    <template v-if="getStatus(product) === 'Finalizado' && currentUserType !== 'ADM'">
+                                        <Button variant="ghost" size="icon" disabled
+                                            class="opacity-40 cursor-not-allowed">
+                                            <Pencil class="h-4 w-4 text-gray-400" />
+                                        </Button>
+                                    </template>
+                                    <template v-else>
+                                        <Link :href="`/products/${product.id}/edit`">
                                         <Button variant="ghost" size="icon">
                                             <Pencil class="h-4 w-4 text-slate-600" />
                                         </Button>
-                                    </Link>
+                                        </Link>
+                                    </template>
                                 </template>
 
                                 <template v-if="canUploadPdf(product)">
                                     <Link :href="`/products/${product.id}/edit-pdf`">
-                                        <Button variant="ghost" size="icon">
-                                            <FileText class="h-4 w-4" :class="product.pdf_path && product.confirmEvidency === 'Aprovado'
-                                                ? 'text-green-600 dark:text-green-400'
-                                                : 'text-gray-500 dark:text-gray-400'" />
-                                        </Button>
+                                    <Button variant="ghost" size="icon">
+                                        <FileText class="h-4 w-4" :class="product.pdf_path && product.confirmEvidency === 'Aprovado'
+                                            ? 'text-green-600 dark:text-green-400'
+                                            : 'text-gray-500 dark:text-gray-400'" />
+                                    </Button>
                                     </Link>
                                 </template>
 
@@ -270,7 +334,47 @@ const filteredProducts = computed(() => {
                 </Table>
             </div>
 
-
+            <!-- Modal da Ação -->
+            <transition name="fade">
+                <div v-if="showActionModal"
+                    class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                    <transition name="popup">
+                        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 w-[480px] text-center">
+                            <h2 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-100">📄 Detalhes da Ação
+                            </h2>
+                            <p class="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap mb-6">{{
+                                selectedAction }}</p>
+                            <Button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+                                @click="showActionModal = false">
+                                <X class="h-4 w-4 inline-block mr-1" /> Fechar
+                            </Button>
+                        </div>
+                    </transition>
+                </div>
+            </transition>
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+.popup-enter-active,
+.popup-leave-active {
+    transition: all 0.25s ease;
+}
+
+.popup-enter-from,
+.popup-leave-to {
+    transform: scale(0.9);
+    opacity: 0;
+}
+</style>

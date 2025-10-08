@@ -12,7 +12,7 @@ import {
 import { ref, watch } from "vue"
 import AppLayout from '@/layouts/AppLayout.vue'
 import Label from '@/components/ui/label/Label.vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, useForm, usePage } from '@inertiajs/vue3'
 import type { BreadcrumbItem } from '@/types'
 import Input from "@/components/ui/input/Input.vue"
 import Button from "@/components/ui/button/Button.vue"
@@ -24,30 +24,32 @@ import { Calendar as CalendarIcon } from "lucide-vue-next"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 
+// === Configuração de datas ===
 const df = new DateFormatter("pt-BR", { dateStyle: "long" })
-
-// valor dos calendários
 const calendarValueStart = ref<DateValue>()
 const calendarValueDue = ref<DateValue>()
 
-// form
+// === Usuário logado ===
+const page = usePage()
+const currentUser = page.props.auth?.user
+
+// === Formulário ===
 const form = useForm({
-  cr: '',
-  ocorrency: '',
-  origin: '',
-  action: '',
-  startDate: '',
-  dueDate: '',
-  email: '',
+  cr: "",
+  ocorrency: "",
+  origin: "",
+  action: "",
+  startDate: "",
+  dueDate: "",
+  email: "",
   pdf: null,
+  nameCreator: currentUser?.name || "", // 👈 já inclui o nome do criador
 })
 
-
-
-// sincroniza valores com o form
+// === Sincroniza calendários com form ===
 watch(calendarValueStart, (val) => {
   form.startDate = val
-    ? val.toDate(getLocalTimeZone()).toISOString().split("T")[0] // só YYYY-MM-DD
+    ? val.toDate(getLocalTimeZone()).toISOString().split("T")[0]
     : ""
 })
 
@@ -58,191 +60,207 @@ watch(calendarValueDue, (val) => {
 })
 
 const breadcrumbs: BreadcrumbItem[] = [
-  { title: 'Registrar Ocorrência', href: '/products/create' },
+  { title: "Registrar Ocorrência", href: "/products/create" },
 ]
 
+// === Lista de CRs ===
+const crList = [
+  { value: "16749 - SP - LOG - WAELZHOLZ BRASMETAL" },
+  { value: "17542 - MG - LOG - SAMARCO GERMANO NOVO" },
+  { value: "17543 - ES - LOG - SAMARCO UBU NOVO" },
+  { value: "24178 - ES - LOG - SAMARCO SPOT ES" },
+  { value: "24238 - SP - LOG - BRASKEM - ILHAS DE FATURAMENTO" },
+  { value: "25458 - SP - TRM - LOCALFRIO GUARUJA (LGH)" },
+  { value: "26052 - SP - LOG - CHEVRON ORONITE" },
+  { value: "27911 - SP - LOG - BRASKEM ENTAMBORAMENTO" },
+  { value: "32470 - SP - LOG - BASF BATISTINI" },
+  { value: "35118 - SP - LOG - USIMINAS - EMBALAGEM (ORM)" },
+  { value: "35119 - SP - LOG - USIMINAS - SERVICOS PORTUARIOS (ORM)" },
+  { value: "35122 - SP - LOG - USIMINAS - EXPED DE PROD ACABADOS (ORM)" },
+  { value: "35132 - SP - LOG - USIMINAS - LAMINACAO A QUENTE (ORM)" },
+  { value: "35180 - SP - LOG - USIMINAS - GERENCIA DA UNIDADE (ORM)" },
+  { value: "40703 - SP - LOG - FLEURY" },
+  { value: "43409 - SP - LOG - BASF LOG EXPEDICAO" },
+  { value: "44242 - SP - LOG - WAELZHOLZ BRASMETAL LAMINACAO" },
+  { value: "44914 - SP - LOG - PIB BRASKEM" },
+  { value: "45955 - SP - LOG - BASF AMERICANA" },
+  { value: "47287 - SP - IND - GC LOG - LUCAS RODRIGUES" },
+  { value: "51115 - SP - LOG - ISA CTEEP" },
+  { value: "56115 - MG - LOG - SAMARCO GERMANO PDER" },
+  { value: "58492 - SP - LOG - FLEURY ASSIST ADM" },
+  { value: "62338 - MG - LOG - ANGLO AMERICAN - MATO DENTRO" },
+  { value: "68807 - SP - LOG - USIMINAS CUBATAO SPOT" },
+  { value: "68820 - SP - IND - APOIO ADM GR LUCAS RODRIGUES" },
+  { value: "75999 - SP - IND - APRENDIZ LUCAS RODRIGUES - CUBATAO" },
+  { value: "76047 - SP - IND - APRENDIZ REGIONAL LUCAS RODRIGUES" },
+  { value: "76357 - SP - LOG - USIMINAS MOV. PORTO CUBATAO" },
+  { value: "77943 - SP - LOG - WAELZHOLZ BRASMETAL DIADEMA - C25" },
+  { value: "79012 - SP - LOG - ATLAS COPCO BARUERI" },
+  { value: "82840 - SP - IND - APOIO ESTRATEGICO GR LUCAS RODRIGUES" },
+]
+
+
+// === Envio do formulário ===
 const handleSubmit = () => {
-  // console.log("Form data:", form.data())
-
-  form.post(route('products.store'), { forceFormData: true })
-
+  form.post(route("products.store"), { forceFormData: true })
 }
 </script>
 
 <template>
+  <Head title="Nova Ocorrência" />
 
-  <Head title="New Ocorrency" />
-
+  
   <AppLayout :breadcrumbs="breadcrumbs">
-    <div class="p-4">
-      <form @submit.prevent="handleSubmit" class="w-8/12 space-y-4">
-        <div class="space-y-3">
+    <div class="flex justify-center py-8 px-4">
+      <form
+        @submit.prevent="handleSubmit"
+        class="bg-white dark:bg-gray-900 shadow-xl rounded-2xl p-8 w-full max-w-2xl space-y-6 border border-gray-200 dark:border-gray-700"
+      >
+        <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100 text-center mb-4">
+          Registrar Nova Ocorrência
+        </h2>
 
+        <!-- CR -->
+        <div class="space-y-2">
           <Label for="cr">CR</Label>
           <Select v-model="form.cr">
-            <SelectTrigger id="cr" class="w-[350px]">
+            <SelectTrigger id="cr" class="w-full">
               <SelectValue placeholder="Selecione o CR..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent class="max-h-[250px] overflow-y-auto">
               <SelectGroup>
                 <SelectLabel>Lista de CRs</SelectLabel>
-
-                <SelectItem value="16749 - SP - LOG - WAELZHOLZ BRASMETAL">16749 - SP - LOG - WAELZHOLZ BRASMETAL
+                <SelectItem
+                  v-for="cr in crList"
+                  :key="cr.value"
+                  :value="cr.value"
+                >
+                  {{ cr.value }}
                 </SelectItem>
-                <SelectItem value="17542 - MG - LOG - SAMARCO GERMANO NOVO">17542 - MG - LOG - SAMARCO GERMANO NOVO
-                </SelectItem>
-                <SelectItem value="17543 - ES - LOG - SAMARCO UBU NOVO">17543 - ES - LOG - SAMARCO UBU NOVO</SelectItem>
-                <SelectItem value="24178 - ES - LOG - SAMARCO SPOT ES">24178 - ES - LOG - SAMARCO SPOT ES</SelectItem>
-                <SelectItem value="24238 - SP - LOG - BRASKEM - ILHAS DE FATURAMENTO">24238 - SP - LOG - BRASKEM - ILHAS
-                  DE FATURAMENTO</SelectItem>
-                <SelectItem value="25458 - SP - TRM - LOCALFRIO GUARUJA (LGH)">25458 - SP - TRM - LOCALFRIO GUARUJA
-                  (LGH)</SelectItem>
-                <SelectItem value="26052 - SP - LOG - CHEVRON ORONITE">26052 - SP - LOG - CHEVRON ORONITE</SelectItem>
-                <SelectItem value="27911 - SP - LOG - BRASKEM ENTAMBORAMENTO">27911 - SP - LOG - BRASKEM ENTAMBORAMENTO
-                </SelectItem>
-                <SelectItem value="32470 - SP - LOG - BASF BATISTINI">32470 - SP - LOG - BASF BATISTINI</SelectItem>
-                <SelectItem value="35118 - SP - LOG - USIMINAS - EMBALAGEM (ORM)">35118 - SP - LOG - USIMINAS -
-                  EMBALAGEM (ORM)</SelectItem>
-                <SelectItem value="35119 - SP - LOG - USIMINAS - SERVICOS PORTUARIOS (ORM)">35119 - SP - LOG - USIMINAS
-                  - SERVICOS PORTUARIOS (ORM)</SelectItem>
-                <SelectItem value="35122 - SP - LOG - USIMINAS - EXPED DE PROD ACABADOS (ORM)">35122 - SP - LOG -
-                  USIMINAS - EXPED DE PROD ACABADOS (ORM)</SelectItem>
-                <SelectItem value="35132 - SP - LOG - USIMINAS - LAMINACAO A QUENTE (ORM)">35132 - SP - LOG - USIMINAS -
-                  LAMINACAO A QUENTE (ORM)</SelectItem>
-                <SelectItem value="35180 - SP - LOG - USIMINAS - GERENCIA DA UNIDADE (ORM)">35180 - SP - LOG - USIMINAS
-                  - GERENCIA DA UNIDADE (ORM)</SelectItem>
-                <SelectItem value="40703 - SP - LOG - FLEURY">40703 - SP - LOG - FLEURY</SelectItem>
-                <SelectItem value="43409 - SP - LOG - BASF LOG EXPEDICAO">43409 - SP - LOG - BASF LOG EXPEDICAO
-                </SelectItem>
-                <SelectItem value="44242 - SP - LOG - WAELZHOLZ BRASMETAL LAMINACAO">44242 - SP - LOG - WAELZHOLZ
-                  BRASMETAL LAMINACAO</SelectItem>
-                <SelectItem value="44914 - SP - LOG - PIB BRASKEM">44914 - SP - LOG - PIB BRASKEM</SelectItem>
-                <SelectItem value="45955 - SP - LOG - BASF AMERICANA">45955 - SP - LOG - BASF AMERICANA</SelectItem>
-                <SelectItem value="47287 - SP - IND - GC LOG - LUCAS RODRIGUES">47287 - SP - IND - GC LOG - LUCAS
-                  RODRIGUES</SelectItem>
-                <SelectItem value="51115 - SP - LOG - ISA CTEEP">51115 - SP - LOG - ISA CTEEP</SelectItem>
-                <SelectItem value="56115 - MG - LOG - SAMARCO GERMANO PDER">56115 - MG - LOG - SAMARCO GERMANO PDER
-                </SelectItem>
-                <SelectItem value="58492 - SP - LOG - FLEURY ASSIST ADM">58492 - SP - LOG - FLEURY ASSIST ADM
-                </SelectItem>
-                <SelectItem value="62338 - MG - LOG - ANGLO AMERICAN - MATO DENTRO">62338 - MG - LOG - ANGLO AMERICAN -
-                  MATO DENTRO</SelectItem>
-                <SelectItem value="68807 - SP - LOG - USIMINAS CUBATAO SPOT">68807 - SP - LOG - USIMINAS CUBATAO SPOT
-                </SelectItem>
-                <SelectItem value="68820 - SP - IND - APOIO ADM GR LUCAS RODRIGUES">68820 - SP - IND - APOIO ADM GR
-                  LUCAS RODRIGUES</SelectItem>
-                <SelectItem value="75999 - SP - IND - APRENDIZ LUCAS RODRIGUES - CUBATAO">75999 - SP - IND - APRENDIZ
-                  LUCAS RODRIGUES - CUBATAO</SelectItem>
-                <SelectItem value="76047 - SP - IND - APRENDIZ REGIONAL LUCAS RODRIGUES">76047 - SP - IND - APRENDIZ
-                  REGIONAL LUCAS RODRIGUES</SelectItem>
-                <SelectItem value="76357 - SP - LOG - USIMINAS MOV. PORTO CUBATAO">76357 - SP - LOG - USIMINAS MOV.
-                  PORTO CUBATAO</SelectItem>
-                <SelectItem value="77943 - SP - LOG - WAELZHOLZ BRASMETAL DIADEMA - C25">77943 - SP - LOG - WAELZHOLZ
-                  BRASMETAL DIADEMA - C25</SelectItem>
-                <SelectItem value="79012 - SP - LOG - ATLAS COPCO BARUERI">79012 - SP - LOG - ATLAS COPCO BARUERI
-                </SelectItem>
-                <SelectItem value="82840 - SP - IND - APOIO ESTRATEGICO GR LUCAS RODRIGUES">82840 - SP - IND - APOIO
-                  ESTRATEGICO GR LUCAS RODRIGUES</SelectItem>
-
               </SelectGroup>
             </SelectContent>
           </Select>
-          <div class="text-sm text-red-600" v-if="form.errors.cr">{{ form.errors.cr }}</div>
+          <p class="text-sm text-red-600" v-if="form.errors.cr">{{ form.errors.cr }}</p>
+        </div>
 
-
-
-          <Label for="tipo">Tipo de ocorrência</Label>
+        <!-- Tipo de Ocorrência -->
+        <div class="space-y-2">
+          <Label for="tipo">Tipo de Ocorrência</Label>
           <Select v-model="form.ocorrency">
-            <SelectTrigger id="tipo" class="w-[350px]">
+            <SelectTrigger id="tipo" class="w-full">
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Tipos</SelectLabel>
-                <SelectItem value="Interna (GPS)">Interna (GPS)</SelectItem>
-                <SelectItem value="Externa (Cliente)">Externa (Cliente)</SelectItem>
-              </SelectGroup>
+              <SelectItem value="Interna (GPS)">Interna (GPS)</SelectItem>
+              <SelectItem value="Externa (Cliente)">Externa (Cliente)</SelectItem>
             </SelectContent>
           </Select>
-          <div class="text-sm text-red-600" v-if="form.errors.ocorrency">{{ form.errors.ocorrency }}</div>
+          <p class="text-sm text-red-600" v-if="form.errors.ocorrency">{{ form.errors.ocorrency }}</p>
+        </div>
 
-
-          <Label for="tipo">Origem</Label>
+        <!-- Origem -->
+        <div class="space-y-2">
+          <Label for="origin">Origem</Label>
           <Select v-model="form.origin">
-            <SelectTrigger id="tipo" class="w-[350px]">
+            <SelectTrigger id="origin" class="w-full">
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Origens</SelectLabel>
-                <SelectItem value="Acidente/Incidente">Acidente/Incidente</SelectItem>
-                <SelectItem value="RAC">RAC</SelectItem>
-                <SelectItem value="Reuniões">Reuniões</SelectItem>
-                <SelectItem value="Relatórios">Relatórios</SelectItem>
-                <SelectItem value="Inspeções">Inspeções</SelectItem>
-                <SelectItem value="Auditorias">Auditorias</SelectItem>
-                <SelectItem value="Exigências Legais e Normativas">Exigências Legais e Normativas</SelectItem>
-                <SelectItem value="Mudanças no Processo ou Equipamento">Mudanças no Processo ou Equipamento</SelectItem>
-                <SelectItem value="Programas de SSO">Programas de SSO</SelectItem>
-                <SelectItem value="Outros">Outros</SelectItem>
-              </SelectGroup>
+              <SelectItem value="Acidente/Incidente">Acidente/Incidente</SelectItem>
+              <SelectItem value="RAC">RAC</SelectItem>
+              <SelectItem value="Reuniões">Reuniões</SelectItem>
+              <SelectItem value="Relatórios">Relatórios</SelectItem>
+              <SelectItem value="Inspeções">Inspeções</SelectItem>
+              <SelectItem value="Auditorias">Auditorias</SelectItem>
+              <SelectItem value="Exigências Legais e Normativas">
+                Exigências Legais e Normativas
+              </SelectItem>
+              <SelectItem value="Mudanças no Processo ou Equipamento">
+                Mudanças no Processo ou Equipamento
+              </SelectItem>
+              <SelectItem value="Programas de SSO">Programas de SSO</SelectItem>
+              <SelectItem value="Outros">Outros</SelectItem>
             </SelectContent>
           </Select>
-          <div class="text-sm text-red-600" v-if="form.errors.origin">{{ form.errors.origin }}</div>
+          <p class="text-sm text-red-600" v-if="form.errors.origin">{{ form.errors.origin }}</p>
+        </div>
 
+        <!-- Ação -->
+        <div class="space-y-2">
           <Label for="acao">Ação</Label>
-          <Input v-model="form.action" id="acao" class="w-[350px]" type="text" placeholder="Descreva a ação"
-            maxlength="255" />
-          <div class="text-sm text-red-600" v-if="form.errors.action">{{ form.errors.action }}</div>
+          <Input
+            v-model="form.action"
+            id="acao"
+            type="text"
+            placeholder="Descreva a ação de forma objetiva..."
+            maxlength="255"
+            class="w-full"
+          />
+          <p class="text-sm text-red-600" v-if="form.errors.action">{{ form.errors.action }}</p>
+        </div>
 
-          <Label for="dateStart">Data de Início</Label>
-          <Popover>
-            <PopoverTrigger as-child>
-              <Button variant="outline" :class="cn(
-                'w-[350px] justify-start text-left font-normal',
-                !calendarValueStart && 'text-muted-foreground',
-              )">
-                <CalendarIcon class="mr-2 h-4 w-4" />
-                {{ calendarValueStart ? df.format(calendarValueStart.toDate(getLocalTimeZone())) : "Selecione uma data"
-                }}
-              </Button>
-            </PopoverTrigger>
+        <!-- Datas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <Label>Data de Início</Label>
+            <Popover>
+              <PopoverTrigger as-child>
+                <Button variant="outline" class="w-full justify-start text-left font-normal">
+                  <CalendarIcon class="mr-2 h-4 w-4" />
+                  {{
+                    calendarValueStart
+                      ? df.format(calendarValueStart.toDate(getLocalTimeZone()))
+                      : "Selecione uma data"
+                  }}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent class="p-0">
+                <Calendar v-model="calendarValueStart" initial-focus />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-            <PopoverContent class="w-auto p-0 bg-popover text-popover-foreground border rounded-md shadow-md z-50">
-              <Calendar v-model="calendarValueStart" initial-focus />
-            </PopoverContent>
-          </Popover>
-          <div class="text-sm text-red-600" v-if="form.errors.startDate">{{ form.errors.startDate }}</div>
+          <div class="space-y-2">
+            <Label>Prazo</Label>
+            <Popover>
+              <PopoverTrigger as-child>
+                <Button variant="outline" class="w-full justify-start text-left font-normal">
+                  <CalendarIcon class="mr-2 h-4 w-4" />
+                  {{
+                    calendarValueDue
+                      ? df.format(calendarValueDue.toDate(getLocalTimeZone()))
+                      : "Selecione uma data"
+                  }}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent class="p-0">
+                <Calendar v-model="calendarValueDue" initial-focus />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
 
-          <Label for="dateDue">Prazo</Label>
-          <Popover>
-            <PopoverTrigger as-child>
-              <Button variant="outline" :class="cn(
-                'w-[350px] justify-start text-left font-normal',
-                !calendarValueDue && 'text-muted-foreground',
-              )">
-                <CalendarIcon class="mr-2 h-4 w-4" />
-                {{ calendarValueDue ? df.format(calendarValueDue.toDate(getLocalTimeZone())) : "Selecione uma data" }}
-              </Button>
-            </PopoverTrigger>
+        <!-- E-mail -->
+        <div class="space-y-2">
+          <Label for="email">Responsável (e-mail)</Label>
+          <Input
+            v-model="form.email"
+            id="email"
+            type="email"
+            placeholder="Digite o e-mail do responsável..."
+            class="w-full"
+          />
+          <p class="text-sm text-red-600" v-if="form.errors.email">{{ form.errors.email }}</p>
+        </div>
 
-            <PopoverContent class="w-auto p-0 bg-popover text-popover-foreground border rounded-md shadow-md z-50">
-              <Calendar v-model="calendarValueDue" initial-focus />
-            </PopoverContent>
-          </Popover>
-          <div class="text-sm text-red-600" v-if="form.errors.dueDate">{{ form.errors.dueDate }}</div>
-
-          <Label for="email">E-mail</Label>
-          <Input v-model="form.email" id="email" class="w-[350px]" type="email" placeholder="Digite o e-mail" />
-          <div class="text-sm text-red-600" v-if="form.errors.email">{{ form.errors.email }}</div>
-
-          <br></br>
-          <Button class="bg-blue-500 hover:bg-blue-600" type="submit">
-            Registrar Ocorrência
+        <!-- Botão -->
+        <div class="flex justify-center pt-4">
+          <Button
+            type="submit"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 font-semibold rounded-md shadow-md transition-all"
+          >
+            💾 Registrar Ocorrência
           </Button>
-
-
-
         </div>
       </form>
     </div>

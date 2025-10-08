@@ -25,11 +25,11 @@ class ProductController extends Controller
         }
 
         $products = $query->latest()->get();
-        $users = User::select('id', 'name', 'email')->get(); // 🔹 pega os usuários
+        $users = User::select('id', 'name', 'email')->get();
 
         return Inertia::render('products/Index', [
             'products' => $products,
-            'users' => $users, // 🔹 passa para o Vue
+            'users' => $users,
         ]);
     }
 
@@ -57,17 +57,15 @@ class ProductController extends Controller
 
         unset($data['pdf']);
 
-        // salva também quem criou a ocorrência
+        // 🔹 Adiciona informações do criador
         $data['emailCreator'] = auth()->user()->email;
+        $data['nameCreator'] = auth()->user()->name;
 
         Product::create($data);
 
         return redirect()->route('products.index')->with('message', 'Ocorrência registrada com sucesso!');
     }
 
-    /**
-     * Abre tela de edição de dados
-     */
     public function edit(Product $product)
     {
         return Inertia::render('products/Edit', [
@@ -75,9 +73,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Abre tela de edição de PDF
-     */
     public function editPdf(Product $product)
     {
         return Inertia::render('products/EditPDF', [
@@ -85,9 +80,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Atualiza somente os dados (sem PDF)
-     */
     public function update(Request $request, Product $product)
     {
         $data = $request->validate([
@@ -105,9 +97,6 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('message', 'Ocorrência atualizada com sucesso!');
     }
 
-    /**
-     * Atualiza somente o PDF
-     */
     public function updatePdf(Request $request, Product $product)
     {
         $data = $request->validate([
@@ -119,10 +108,11 @@ class ProductController extends Controller
         // 🔹 Reseta status e motivo ao reenviar evidência
         $data['confirmEvidency'] = null;
         $data['reason'] = null;
+        $data['reasonDateTime'] = null; // 🔹 zera a data da última aprovação/reprovação
 
         // 🔹 Registra infos adicionais
-        $data['lastPdfUpload'] = now(); // data e hora do upload
-        $data['evidencyUpploader'] = auth()->user()->name; // nome do usuário logado
+        $data['lastPdfUpload'] = now();
+        $data['evidencyUpploader'] = auth()->user()->name;
 
         $product->update($data);
 
@@ -143,7 +133,8 @@ class ProductController extends Controller
         $product->update([
             'confirmEvidency' => 'Aprovado',
             'reason' => null,
-            'evidencyApprover' => auth()->user()->name, // nome de quem aprovou
+            'evidencyApprover' => auth()->user()->name,
+            'reasonDateTime' => now(), // ✅ Data e hora da aprovação
         ]);
 
         return redirect()->route('products.index')->with('message', '✅ Evidência aprovada com sucesso!');
@@ -158,7 +149,8 @@ class ProductController extends Controller
         $product->update([
             'confirmEvidency' => 'Reprovado',
             'reason' => $data['reason'],
-            'evidencyApprover' => auth()->user()->name, // 👈 salva quem recusou
+            'evidencyApprover' => auth()->user()->name,
+            'reasonDateTime' => now(), // ✅ Data e hora da reprovação
         ]);
 
         return redirect()->route('products.index')->with('message', '❌ Evidência reprovada com motivo registrado!');
@@ -177,14 +169,14 @@ class ProductController extends Controller
             'Evidência Recusada' => 0,
         ];
 
-        $items = []; // ← aqui vamos gerar também
+        $items = [];
 
         foreach ($products as $product) {
             $status = '';
 
-            if (! $product->pdf_path && $product->dueDate < $now) {
+            if (!$product->pdf_path && $product->dueDate < $now) {
                 $status = 'Atrasado';
-            } elseif (! $product->pdf_path && $product->dueDate >= $now) {
+            } elseif (!$product->pdf_path && $product->dueDate >= $now) {
                 $status = 'Pendente';
             } elseif ($product->pdf_path && is_null($product->confirmEvidency)) {
                 $status = 'Pendente Aprovação';
@@ -194,12 +186,10 @@ class ProductController extends Controller
                 $status = 'Evidência Recusada';
             }
 
-            // acumula contagem
             if ($status) {
                 $statusCounts[$status]++;
             }
 
-            // adiciona item para o gráfico dinâmico
             $items[] = [
                 'cr' => $product->cr,
                 'origin' => $product->origin,
@@ -219,7 +209,7 @@ class ProductController extends Controller
             'statusCounts' => $statusCounts,
             'crCounts' => $crCounts,
             'originCounts' => $originCounts,
-            'items' => $items, // 👈 agora com status calculado
+            'items' => $items,
         ]);
     }
 }

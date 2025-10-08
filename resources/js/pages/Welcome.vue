@@ -44,9 +44,9 @@ import { Head, Link } from '@inertiajs/vue3';
                 
                 <!-- Texto -->
                 <div class="flex-1 p-6 lg:p-20 text-gray-800">
-                    <h1 class="mb-2 text-3xl font-extrabold tracking-tight">Projeto QSSMA</h1>
+                    <h1 class="mb-2 text-3xl font-extrabold tracking-tight">Projeto SIGO</h1>
                     <p class="mb-4 text-base text-gray-600">
-                        Controle de ocorrências. <br />
+                        <b>Si</b>stema de  <b>G</b>estão de  <b>O</b>corrências. <br />
                         Desenvolvido em Laravel
                         <img src="https://laravel.com/img/logomark.min.svg" alt="Laravel Logo"
                             class="inline-block h-5 ml-1 align-middle" />
