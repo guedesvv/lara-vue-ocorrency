@@ -49,6 +49,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
 
+    // Histórico de PDFs
+    Route::get('/products/{product}/pdf-history', [ProductController::class, 'pdfHistory'])
+        ->name('products.pdfHistory');
+
 });
 
 require __DIR__.'/settings.php';

@@ -63,10 +63,6 @@ const deleteUser = () => {
   <AppLayout :breadcrumbs="[{ title: 'Controle de Usuários', href: '/users' }]">
     <div class="p-6">
 
-      <h1 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-200 flex items-center gap-2">
-        👥 Controle de Usuários
-      </h1>
-
       <div
         class="rounded-xl border border-gray-300 dark:border-gray-700 shadow-lg bg-white dark:bg-gray-900 overflow-x-auto">
         <table class="w-full border-collapse">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\User;
+use App\Models\PdfHistory; // ✅ Correto!
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -142,18 +143,31 @@ class ProductController extends Controller
 
     public function rejectEvidency(Request $request, Product $product)
     {
+        // ✅ 1. Validação da entrada
         $data = $request->validate([
             'reason' => 'required|string|max:255',
         ]);
 
+        // ✅ 2. Atualiza a tabela products primeiro (como já faz hoje)
         $product->update([
             'confirmEvidency' => 'Reprovado',
             'reason' => $data['reason'],
             'evidencyApprover' => auth()->user()->name,
-            'reasonDateTime' => now(), // ✅ Data e hora da reprovação
+            'reasonDateTime' => now(), // data e hora da reprovação
         ]);
 
-        return redirect()->route('products.index')->with('message', '❌ Evidência reprovada com motivo registrado!');
+        // ✅ 3. Cria um registro de histórico na tabela pdf_history
+        PdfHistory::create([
+            'ocorrencyId' => $product->id,                          // ID da ocorrência
+            'pdf_path' => $product->pdf_path,                       // Caminho do PDF
+            'uploadDate' => $product->lastPdfUpload,                // Data do upload
+            'evidencyUploader' => $product->evidencyUpploader,      // Quem enviou
+            'reason' => $product->reason,                           // Motivo da recusa
+            'reasonDateTime' => $product->reasonDateTime,           // Data da recusa
+            'evidencyApprover' => $product->evidencyApprover,       // Quem reprovou
+        ]);
+
+        return redirect()->route('products.index')->with('message', '❌ Evidência reprovada com motivo registrado e histórico salvo!');
     }
 
     public function dashboard()
@@ -174,9 +188,9 @@ class ProductController extends Controller
         foreach ($products as $product) {
             $status = '';
 
-            if (!$product->pdf_path && $product->dueDate < $now) {
+            if (! $product->pdf_path && $product->dueDate < $now) {
                 $status = 'Atrasado';
-            } elseif (!$product->pdf_path && $product->dueDate >= $now) {
+            } elseif (! $product->pdf_path && $product->dueDate >= $now) {
                 $status = 'Pendente';
             } elseif ($product->pdf_path && is_null($product->confirmEvidency)) {
                 $status = 'Pendente Aprovação';
@@ -211,5 +225,15 @@ class ProductController extends Controller
             'originCounts' => $originCounts,
             'items' => $items,
         ]);
+    }
+
+    public function pdfHistory(Product $product)
+    {
+        // Busca todas as recusas da ocorrência
+        $history = PdfHistory::where('ocorrencyId', $product->id)
+            ->orderBy('reasonDateTime', 'desc')
+            ->get();
+
+        return response()->json($history);
     }
 }

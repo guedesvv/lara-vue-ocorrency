@@ -153,41 +153,48 @@ const statusChartOptions = makeOptions("Status das ocorrências")
   <AppLayout :breadcrumbs="[{ title: 'Dashboard', href: '/dashboard' }]">
     <div class="p-4 space-y-6">
 
-      <!-- 🔹 FILTROS BONITOS E RESPONSIVOS -->
-      <div
-        class="flex flex-wrap items-end gap-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
+      <!-- 🔹 FILTROS SEPARADOS E ESTILIZADOS -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-          <!-- CR -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CR</label>
-            <select v-model="selectedCr"
-              class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-              <option value="__ALL__">Todos</option>
-              <option v-for="cr in crOptions" :key="cr" :value="cr">{{ cr }}</option>
-            </select>
-          </div>
-
-          <!-- Origem -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Origem</label>
-            <select v-model="selectedOrigin"
-              class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-              <option value="__ALL__">Todas</option>
-              <option v-for="o in originOptions" :key="o" :value="o">{{ o }}</option>
-            </select>
-          </div>
-
-          <!-- Status -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-            <select v-model="selectedStatus"
-              class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
-              <option value="__ALL__">Todos</option>
-              <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
-            </select>
-          </div>
+        <!-- Filtro CR -->
+        <div class="flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 
+           border border-blue-200 dark:border-gray-700 rounded-xl p-4 shadow-md transition-all hover:shadow-lg">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+            <Filter class="w-4 h-4 text-blue-600 dark:text-blue-400" /> CR
+          </label>
+          <select v-model="selectedCr" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 
+             text-gray-800 dark:text-gray-100 text-sm px-3 py-2 focus:ring-2 focus:ring-blue-500 transition-all">
+            <option value="__ALL__">Todos</option>
+            <option v-for="cr in crOptions" :key="cr" :value="cr">{{ cr }}</option>
+          </select>
         </div>
+
+        <!-- Filtro Origem -->
+        <div class="flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 
+           border border-blue-200 dark:border-gray-700 rounded-xl p-4 shadow-md transition-all hover:shadow-lg">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+            <Filter class="w-4 h-4 text-blue-600 dark:text-blue-400" /> Origem
+          </label>
+          <select v-model="selectedOrigin" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 
+             text-gray-800 dark:text-gray-100 text-sm px-3 py-2 focus:ring-2 focus:ring-blue-500 transition-all">
+            <option value="__ALL__">Todas</option>
+            <option v-for="o in originOptions" :key="o" :value="o">{{ o }}</option>
+          </select>
+        </div>
+
+        <!-- Filtro Status -->
+        <div class="flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 
+           border border-blue-200 dark:border-gray-700 rounded-xl p-4 shadow-md transition-all hover:shadow-lg">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+            <Filter class="w-4 h-4 text-blue-600 dark:text-blue-400" /> Status
+          </label>
+          <select v-model="selectedStatus" class="w-full rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 
+             text-gray-800 dark:text-gray-100 text-sm px-3 py-2 focus:ring-2 focus:ring-blue-500 transition-all">
+            <option value="__ALL__">Todos</option>
+            <option v-for="s in statusOptions" :key="s" :value="s">{{ s }}</option>
+          </select>
+        </div>
+
       </div>
 
       <!-- 🔹 GRÁFICOS AJUSTADOS À TELA -->

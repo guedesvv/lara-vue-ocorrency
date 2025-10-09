@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Product; // 🔹 Importa o model Product
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,19 +36,29 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        // 🔹 Verifica se o e-mail informado existe na tabela products
+        $emailExistsInProducts = \App\Models\Product::where('email', $request->email)->exists();
+
+        // 🔹 Define valores padrão com base nessa verificação
+        $userType    = 'Usuario Padrão';
+        $approveUser = $emailExistsInProducts ? 'Sim' : 'Nao';
+
+        // 🔹 Criação do usuário
         $user = User::create([
             'name'      => $request->name,
             'email'     => $request->email,
             'password'  => Hash::make($request->password),
-
-            // 🔹 Defaults
-            'userType'     => 'Usuario Padrão',
-            'ApproveUser'  => 'Nao',
+            'userType'  => $userType,
+            'ApproveUser' => $approveUser,
         ]);
 
         event(new Registered($user));
 
-        // 🔹 Não loga o usuário, apenas redireciona para login
-        return redirect()->route('login')->with('message', 'Conta criada com sucesso! Aguarde aprovação para acessar.');
+        // 🔹 Redirecionamento com mensagens diferentes conforme o caso
+        if ($emailExistsInProducts) {
+            return redirect()->route('login')->with('message', 'Conta criada e aprovada automaticamente! Você já pode acessar.');
+        } else {
+            return redirect()->route('login')->with('message', 'Conta criada com sucesso! Aguarde aprovação para acessar.');
+        }
     }
 }
