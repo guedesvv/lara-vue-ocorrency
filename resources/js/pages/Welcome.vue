@@ -22,7 +22,7 @@ import { Head, Link } from '@inertiajs/vue3';
             <nav class="flex items-center justify-end gap-4 text-gray-800 font-medium">
                 <Link v-if="$page.props.auth.user" :href="dashboard()"
                     class="inline-block rounded-sm border border-gray-400/50 px-5 py-1.5 text-sm hover:bg-gray-200/60 transition backdrop-blur-md bg-white/80 shadow-sm">
-                    Dashboard
+                    Início
                 </Link>
                 <template v-else>
                     <Link :href="login()"

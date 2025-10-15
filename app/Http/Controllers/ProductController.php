@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PdfHistory;
 use App\Models\Product;
-use App\Models\User;
-use App\Models\PdfHistory; // ✅ Correto!
+use App\Models\User; // ✅ Correto!
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -49,7 +49,7 @@ class ProductController extends Controller
             'startDate' => 'required|date',
             'dueDate' => 'required|date',
             'email' => 'required|email|max:255',
-            'pdf' => 'nullable|file|mimes:pdf|max:2048',
+            'pdf' => 'nullable|file|mimes:pdf|max:999048',
         ]);
 
         if ($request->hasFile('pdf')) {
@@ -105,21 +105,17 @@ class ProductController extends Controller
         ]);
 
         $data['pdf_path'] = $request->file('pdf')->store('products_pdfs', 'public');
-
-        // 🔹 Reseta status e motivo ao reenviar evidência
         $data['confirmEvidency'] = null;
         $data['reason'] = null;
-        $data['reasonDateTime'] = null; // 🔹 zera a data da última aprovação/reprovação
-
-        // 🔹 Registra infos adicionais
+        $data['reasonDateTime'] = null;
         $data['lastPdfUpload'] = now();
         $data['evidencyUpploader'] = auth()->user()->name;
 
         $product->update($data);
 
         return redirect()
-            ->route('products.index')
-            ->with('message', 'PDF atualizado com sucesso! Status resetado para pendente.');
+            ->route('products.editPdf', $product->id)
+            ->with('message', '✅ PDF atualizado com sucesso! Status resetado para pendente.');
     }
 
     public function destroy(Product $product)
@@ -135,39 +131,40 @@ class ProductController extends Controller
             'confirmEvidency' => 'Aprovado',
             'reason' => null,
             'evidencyApprover' => auth()->user()->name,
-            'reasonDateTime' => now(), // ✅ Data e hora da aprovação
+            'reasonDateTime' => now(),
         ]);
 
-        return redirect()->route('products.index')->with('message', '✅ Evidência aprovada com sucesso!');
+        return redirect()
+            ->route('products.editPdf', $product->id)
+            ->with('message', '✅ Evidência aprovada com sucesso!');
     }
 
     public function rejectEvidency(Request $request, Product $product)
     {
-        // ✅ 1. Validação da entrada
         $data = $request->validate([
             'reason' => 'required|string|max:255',
         ]);
 
-        // ✅ 2. Atualiza a tabela products primeiro (como já faz hoje)
         $product->update([
             'confirmEvidency' => 'Reprovado',
             'reason' => $data['reason'],
             'evidencyApprover' => auth()->user()->name,
-            'reasonDateTime' => now(), // data e hora da reprovação
+            'reasonDateTime' => now(),
         ]);
 
-        // ✅ 3. Cria um registro de histórico na tabela pdf_history
         PdfHistory::create([
-            'ocorrencyId' => $product->id,                          // ID da ocorrência
-            'pdf_path' => $product->pdf_path,                       // Caminho do PDF
-            'uploadDate' => $product->lastPdfUpload,                // Data do upload
-            'evidencyUploader' => $product->evidencyUpploader,      // Quem enviou
-            'reason' => $product->reason,                           // Motivo da recusa
-            'reasonDateTime' => $product->reasonDateTime,           // Data da recusa
-            'evidencyApprover' => $product->evidencyApprover,       // Quem reprovou
+            'ocorrencyId' => $product->id,
+            'pdf_path' => $product->pdf_path,
+            'uploadDate' => $product->lastPdfUpload,
+            'evidencyUploader' => $product->evidencyUpploader,
+            'reason' => $product->reason,
+            'reasonDateTime' => $product->reasonDateTime,
+            'evidencyApprover' => $product->evidencyApprover,
         ]);
 
-        return redirect()->route('products.index')->with('message', '❌ Evidência reprovada com motivo registrado e histórico salvo!');
+        return redirect()
+            ->route('products.editPdf', $product->id)
+            ->with('message', '❌ Evidência reprovada com motivo registrado e histórico salvo!');
     }
 
     public function dashboard()

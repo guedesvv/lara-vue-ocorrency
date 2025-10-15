@@ -259,7 +259,7 @@ const handleSubmit = () => {
             type="submit"
             class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 font-semibold rounded-md shadow-md transition-all"
           >
-            💾 Registrar Ocorrência
+            Registrar Ocorrência
           </Button>
         </div>
       </form>
