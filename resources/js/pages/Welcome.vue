@@ -65,19 +65,6 @@ import { Head, Link } from '@inertiajs/vue3';
                                 </svg>
                             </a>
                         </li>
-
-                        <li class="flex items-center gap-0 text-sm text-gray-500 mt-2">
-                            <b>Estruturação</b>
-                            <a href="https://www.linkedin.com/in/debora-ribe/" target="_blank"
-                                class="ml-1 inline-flex items-center space-x-1 font-medium text-blue-900 underline">
-                                <span>Débora Ribeiro</span>
-                                <svg width="10" height="11" viewBox="0 0 10 11" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5">
-                                    <path d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001" stroke="currentColor"
-                                        stroke-linecap="square" />
-                                </svg>
-                            </a>
-                        </li>
                     </ul>
                 </div>
 
